@@ -1,36 +1,68 @@
 import Foundation
 import Combine
 
+enum FollowScope: String, CaseIterable {
+    case all = "全部关注"
+    case special = "特别关注"
+}
+
 @MainActor
 final class TimelineViewModel: ObservableObject {
     @Published private(set) var posts: [TimelinePost] = []
     @Published private(set) var isLoadingMore = false
+    @Published var lastErrorMessage = ""
+    @Published private(set) var currentScope: FollowScope = .all
 
-    private var page = 0
+    private var currentPage = 0
+    private var hasMore = true
+    private let pageSize = 20
+    private let timelineService: TimelineServiceProtocol
+    private let tokenStore: AuthTokenStoreProtocol
 
-    init() {
-        posts = Self.mockPosts(page: 0)
+    init(
+        timelineService: TimelineServiceProtocol = MockTimelineService(),
+        tokenStore: AuthTokenStoreProtocol = UserDefaultsTokenStore()
+    ) {
+        self.timelineService = timelineService
+        self.tokenStore = tokenStore
     }
 
     func refresh() async {
-        try? await Task.sleep(nanoseconds: 700_000_000)
-        page = 0
-        posts = Self.mockPosts(page: 0)
+        currentPage = 0
+        hasMore = true
+        await fetchPage(reset: true)
     }
 
-    func loadMoreIfNeeded(currentItem item: TimelinePost?) async {
+    func posts(for scope: FollowScope) -> [TimelinePost] {
+        switch scope {
+        case .all:
+            return posts
+        case .special:
+            return posts.filter { $0.user.isSpecialFollow }
+        }
+    }
+
+    func applyScope(_ scope: FollowScope) async {
+        currentScope = scope
+        await refresh()
+    }
+
+    func loadMoreIfNeeded(currentItem item: TimelinePost?, scope: FollowScope) async {
+        currentScope = scope
+
+        guard hasMore else { return }
+
+        let visiblePosts = posts(for: scope)
         guard let item,
-              let last = posts.last,
+              let last = visiblePosts.last,
               item.id == last.id,
               !isLoadingMore
         else { return }
 
         isLoadingMore = true
         defer { isLoadingMore = false }
-
-        try? await Task.sleep(nanoseconds: 600_000_000)
-        page += 1
-        posts.append(contentsOf: Self.mockPosts(page: page))
+        currentPage += 1
+        await fetchPage(reset: false)
     }
 
     func toggleLike(postID: UUID) {
@@ -49,7 +81,7 @@ final class TimelineViewModel: ObservableObject {
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
-        let me = TimelineUser(name: "你", handle: "@me")
+        let me = TimelineUser(name: "你", handle: "@me", isSpecialFollow: true)
         let newPost = TimelinePost(
             user: me,
             content: trimmed,
@@ -62,26 +94,41 @@ final class TimelineViewModel: ObservableObject {
         posts.insert(newPost, at: 0)
     }
 
-    private static func mockPosts(page: Int) -> [TimelinePost] {
-        let users = [
-            TimelineUser(name: "雪川", handle: "@xuechuan", badge: "V"),
-            TimelineUser(name: "像素茶馆", handle: "@pixeltea"),
-            TimelineUser(name: "阿澈", handle: "@archer", badge: "V")
-        ]
+    var serviceName: String {
+        timelineService.serviceName
+    }
 
-        return (0..<10).map { idx in
-            let user = users[(idx + page) % users.count]
-            let imageCount = ((idx + page) % 4 == 0) ? 3 : (((idx + page) % 3 == 0) ? 1 : 0)
-            return TimelinePost(
-                user: user,
-                content: "第 \(page + 1) 页动态 \(idx + 1)：今天把列表交互打磨了一遍，滚动时信息密度更高，阅读也更顺手。",
-                publishTime: "\(8 + idx) 分钟前",
-                source: "iPhone 17 Pro",
-                imageNames: Array(repeating: "photo", count: imageCount),
-                likeCount: 20 + idx + page * 2,
-                repostCount: 3 + idx,
-                commentCount: 5 + idx
+    var storedAccessToken: String {
+        tokenStore.accessToken ?? ""
+    }
+
+    func saveAccessToken(_ token: String) {
+        tokenStore.accessToken = token
+    }
+
+    func clearAccessToken() {
+        tokenStore.accessToken = nil
+    }
+
+    private func fetchPage(reset: Bool) async {
+        do {
+            let page = try await timelineService.fetchHomeTimeline(
+                page: currentPage,
+                pageSize: pageSize,
+                scope: currentScope
             )
+            if reset {
+                posts = page.items
+            } else {
+                posts.append(contentsOf: page.items)
+            }
+            hasMore = page.hasMore
+            lastErrorMessage = ""
+        } catch {
+            lastErrorMessage = error.localizedDescription
+            if !reset, currentPage > 0 {
+                currentPage -= 1
+            }
         }
     }
 }

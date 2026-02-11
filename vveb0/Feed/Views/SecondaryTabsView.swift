@@ -1,31 +1,54 @@
 import SwiftUI
 
-struct DiscoveryView: View {
+struct MessageView: View {
+    @ObservedObject var viewModel: TimelineViewModel
+    @State private var accessToken: String
+
+    init(viewModel: TimelineViewModel) {
+        self.viewModel = viewModel
+        _accessToken = State(initialValue: viewModel.storedAccessToken)
+    }
+
     var body: some View {
         NavigationStack {
             List {
-                ForEach(1..<10, id: \.self) { idx in
-                    HStack {
-                        Text("热搜 \(idx)")
-                        Spacer()
-                        Text("\(idx * 10)万")
-                            .foregroundStyle(.secondary)
+                Section("开发调试") {
+                    LabeledContent("数据源", value: viewModel.serviceName)
+
+                    TextField("输入 API Token", text: $accessToken)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+
+                    HStack(spacing: 12) {
+                        Button("保存 Token") {
+                            viewModel.saveAccessToken(accessToken)
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        Button("清空 Token", role: .destructive) {
+                            accessToken = ""
+                            viewModel.clearAccessToken()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+
+                    Button("刷新首页") {
+                        Task { await viewModel.refresh() }
+                    }
+
+                    if !viewModel.lastErrorMessage.isEmpty {
+                        Text(viewModel.lastErrorMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
                     }
                 }
-            }
-            .navigationTitle("发现")
-        }
-    }
-}
 
-struct MessageView: View {
-    var body: some View {
-        NavigationStack {
-            List {
-                Label("评论", systemImage: "message")
-                Label("@我的", systemImage: "at")
-                Label("赞和收藏", systemImage: "heart")
-                Label("私信", systemImage: "envelope")
+                Section("消息") {
+                    Label("评论", systemImage: "message")
+                    Label("@我的", systemImage: "at")
+                    Label("赞和收藏", systemImage: "heart")
+                    Label("私信", systemImage: "envelope")
+                }
             }
             .navigationTitle("消息")
         }
@@ -33,6 +56,8 @@ struct MessageView: View {
 }
 
 struct ProfileView: View {
+    @ObservedObject var session: SessionViewModel
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -49,10 +74,10 @@ struct ProfileView: View {
                             }
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("你的昵称")
+                            Text(session.displayName)
                                 .font(.title3)
                                 .fontWeight(.semibold)
-                            Text("@me")
+                            Text(session.handle)
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -75,6 +100,15 @@ struct ProfileView: View {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(Color(.secondarySystemBackground))
                     )
+
+                    Button(role: .destructive) {
+                        session.logout()
+                    } label: {
+                        Text("退出登录")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.bordered)
                 }
                 .padding(16)
             }

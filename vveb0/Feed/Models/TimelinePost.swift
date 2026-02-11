@@ -5,12 +5,14 @@ struct TimelineUser: Identifiable, Hashable {
     let name: String
     let handle: String
     let badge: String?
+    let isSpecialFollow: Bool
 
-    init(id: UUID = UUID(), name: String, handle: String, badge: String? = nil) {
+    init(id: UUID = UUID(), name: String, handle: String, badge: String? = nil, isSpecialFollow: Bool = false) {
         self.id = id
         self.name = name
         self.handle = handle
         self.badge = badge
+        self.isSpecialFollow = isSpecialFollow
     }
 }
 

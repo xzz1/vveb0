@@ -4,18 +4,18 @@ struct HomeTimelineView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @Binding var showComposer: Bool
 
-    @State private var selectedChannel: HomeChannel = .recommended
+    @State private var selectedScope: FollowScope = .all
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(viewModel.posts) { post in
+                ForEach(viewModel.posts(for: selectedScope)) { post in
                     NavigationLink {
                         PostDetailView(post: post, viewModel: viewModel)
                     } label: {
                         PostCardView(post: post, viewModel: viewModel)
                             .task {
-                                await viewModel.loadMoreIfNeeded(currentItem: post)
+                                await viewModel.loadMoreIfNeeded(currentItem: post, scope: selectedScope)
                             }
                     }
                     .buttonStyle(.plain)
@@ -34,19 +34,43 @@ struct HomeTimelineView: View {
                 }
             }
             .listStyle(.plain)
+            .task {
+                if viewModel.posts(for: selectedScope).isEmpty {
+                    await viewModel.applyScope(selectedScope)
+                }
+            }
+            .onChange(of: selectedScope) { _, newScope in
+                Task {
+                    await viewModel.applyScope(newScope)
+                }
+            }
             .refreshable {
                 await viewModel.refresh()
             }
             .navigationTitle("首页")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Picker("频道", selection: $selectedChannel) {
-                        ForEach(HomeChannel.allCases, id: \.self) { channel in
-                            Text(channel.rawValue).tag(channel)
+                    Menu {
+                        ForEach(FollowScope.allCases, id: \.self) { scope in
+                            Button {
+                                selectedScope = scope
+                            } label: {
+                                if selectedScope == scope {
+                                    Label(scope.rawValue, systemImage: "checkmark")
+                                } else {
+                                    Text(scope.rawValue)
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(selectedScope.rawValue)
+                                .font(.headline)
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
-                    .pickerStyle(.segmented)
-                    .frame(width: 160)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -59,9 +83,4 @@ struct HomeTimelineView: View {
             }
         }
     }
-}
-
-enum HomeChannel: String, CaseIterable {
-    case following = "关注"
-    case recommended = "推荐"
 }

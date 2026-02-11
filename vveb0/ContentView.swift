@@ -1,26 +1,50 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var viewModel = TimelineViewModel()
+    @StateObject private var session = SessionViewModel()
+    @StateObject private var viewModel: TimelineViewModel
     @State private var selectedTab: RootTab = .home
     @State private var showComposer = false
 
+    init() {
+        let tokenStore = UserDefaultsTokenStore()
+        let timelineService: TimelineServiceProtocol = MockTimelineService()
+        _viewModel = StateObject(
+            wrappedValue: TimelineViewModel(
+                timelineService: timelineService,
+                tokenStore: tokenStore
+            )
+        )
+    }
+
     var body: some View {
+        Group {
+            if session.isLoggedIn {
+                mainTabs
+            } else {
+                LoginView(session: session)
+            }
+        }
+        .onChange(of: session.isLoggedIn) { _, loggedIn in
+            if !loggedIn {
+                selectedTab = .home
+                showComposer = false
+            }
+        }
+    }
+
+    private var mainTabs: some View {
         ZStack(alignment: .bottomTrailing) {
             TabView(selection: $selectedTab) {
                 HomeTimelineView(viewModel: viewModel, showComposer: $showComposer)
                     .tabItem { Label("首页", systemImage: "house") }
                     .tag(RootTab.home)
 
-                DiscoveryView()
-                    .tabItem { Label("发现", systemImage: "safari") }
-                    .tag(RootTab.discovery)
-
-                MessageView()
+                MessageView(viewModel: viewModel)
                     .tabItem { Label("消息", systemImage: "bubble.left.and.bubble.right") }
                     .tag(RootTab.message)
 
-                ProfileView()
+                ProfileView(session: session)
                     .tabItem { Label("我", systemImage: "person") }
                     .tag(RootTab.profile)
             }
@@ -52,7 +76,11 @@ struct ContentView: View {
 
 enum RootTab: Hashable {
     case home
-    case discovery
     case message
     case profile
+}
+
+
+#Preview {
+    ContentView()
 }
