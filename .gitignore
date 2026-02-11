@@ -20,6 +20,9 @@ xcuserdata/
 # macOS
 .DS_Store
 
+# IDE
+.idea/
+
 # Fastlane
 fastlane/report.xml
 fastlane/Preview.html
