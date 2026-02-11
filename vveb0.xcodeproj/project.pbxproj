@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3B96B0F92EEEABB300767807 /* AlarmKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3B96B0F82EEEABB300767807 /* AlarmKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,7 +30,6 @@
 		3B96B0BD2EEEA19000767807 /* vveb0.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = vveb0.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B96B0CA2EEEA19100767807 /* vveb0Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = vveb0Tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B96B0D42EEEA19100767807 /* vveb0UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = vveb0UITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		3B96B0F82EEEABB300767807 /* AlarmKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AlarmKit.framework; path = System/Library/Frameworks/AlarmKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -70,7 +68,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3B96B0F92EEEABB300767807 /* AlarmKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -115,7 +112,6 @@
 		3B96B0F72EEEABB200767807 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				3B96B0F82EEEABB300767807 /* AlarmKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
